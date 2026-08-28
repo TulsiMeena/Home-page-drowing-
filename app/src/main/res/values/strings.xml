@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">BlackCanvas</string>
+    <string name="widget_label">Draw</string>
+    <string name="widget_description">Tap to open pure black smooth drawing canvas</string>
+</resources>

@@ -1,0 +1,6 @@
+{
+  "name": "BlackCanvas",
+  "description": "Ultra-smooth, low-latency black canvas drawing application with finger and stylus support, vector strokes, and minimalist floating controls.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

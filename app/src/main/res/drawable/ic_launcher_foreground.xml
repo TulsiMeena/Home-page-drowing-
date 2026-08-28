@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Stylus Body -->
+    <path
+        android:fillColor="#00E5FF"
+        android:pathData="M64.5,30.5 L77.5,43.5 L46.5,74.5 L33.5,61.5 Z" />
+    <!-- Stylus Tip (White nib) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M33.5,61.5 L46.5,74.5 L30.5,77.5 Z" />
+    <!-- Nib active point -->
+    <path
+        android:fillColor="#00E5FF"
+        android:pathData="M30.5,77.5 L34.5,73.5 L36.5,75.5 Z" />
+    <!-- Stylus Top Cap -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M64.5,30.5 L71.5,23.5 C73.5,21.5 76.5,21.5 78.5,23.5 L84.5,29.5 C86.5,31.5 86.5,34.5 84.5,36.5 L77.5,43.5 Z" />
+    <!-- Glowing vector stroke arc -->
+    <path
+        android:strokeColor="#00E5FF"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:pathData="M26,79 C22,83 18,90 28,90 C42,90 60,82 78,85" />
+    <!-- Sparkle / Accent dot -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M24,28 A3,3 0 1,0 24,22 A3,3 0 1,0 24,28 Z" />
+    <path
+        android:fillColor="#00E5FF"
+        android:pathData="M84,68 A2,2 0 1,0 84,64 A2,2 0 1,0 84,68 Z" />
+</vector>
