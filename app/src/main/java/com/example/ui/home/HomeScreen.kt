@@ -114,6 +114,14 @@ fun HomeScreen(
         mutableStateOf(prefs.getBoolean(FloatingDrawingService.KEY_EDGE_SNAP, true))
     }
 
+    var isLockScreenDrawingEnabled by remember {
+        mutableStateOf(prefs.getBoolean(FloatingDrawingService.KEY_LOCK_SCREEN_DRAWING, true))
+    }
+
+    var isOledBlackMemoEnabled by remember {
+        mutableStateOf(prefs.getBoolean(FloatingDrawingService.KEY_OLED_BLACK_MODE, false))
+    }
+
     val overlayPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) {
@@ -401,6 +409,54 @@ fun HomeScreen(
                             onCheckedChange = { snap ->
                                 isEdgeSnapEnabled = snap
                                 prefs.edit().putBoolean(FloatingDrawingService.KEY_EDGE_SNAP, snap).apply()
+                            },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = Color.Black,
+                                checkedTrackColor = Color(0xFF00E5FF)
+                            )
+                        )
+                    }
+
+                    // Lock Screen Drawing Option
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text("Draw on Lock Screen", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                            Text("Draw notes without unlocking phone", color = Color(0xFF8E92A4), fontSize = 11.sp)
+                        }
+
+                        Switch(
+                            checked = isLockScreenDrawingEnabled,
+                            onCheckedChange = { enable ->
+                                isLockScreenDrawingEnabled = enable
+                                prefs.edit().putBoolean(FloatingDrawingService.KEY_LOCK_SCREEN_DRAWING, enable).apply()
+                            },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = Color.Black,
+                                checkedTrackColor = Color(0xFF00E5FF)
+                            )
+                        )
+                    }
+
+                    // OLED Pure Black Canvas / Screen-Off Memo Mode
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text("Pure Black Screen (Screen-Off Memo)", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                            Text("Uses pitch-black OLED background to save battery", color = Color(0xFF8E92A4), fontSize = 11.sp)
+                        }
+
+                        Switch(
+                            checked = isOledBlackMemoEnabled,
+                            onCheckedChange = { enable ->
+                                isOledBlackMemoEnabled = enable
+                                prefs.edit().putBoolean(FloatingDrawingService.KEY_OLED_BLACK_MODE, enable).apply()
                             },
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = Color.Black,

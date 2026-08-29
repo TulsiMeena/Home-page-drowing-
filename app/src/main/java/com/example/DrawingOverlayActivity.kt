@@ -2,7 +2,9 @@ package com.example
 
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -22,12 +24,35 @@ class DrawingOverlayActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
+        // Enable Drawing on Lock Screen & Screen-Off Note Mode
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            setShowWhenLocked(true)
+            setTurnScreenOn(true)
+        } else {
+            @Suppress("DEPRECATION")
+            window.addFlags(
+                WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
+                    WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON or
+                    WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD
+            )
+        }
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+
         currentActivityRef = WeakReference(this)
         FloatingDrawingService.notifyOverlayVisible(this, true)
 
-        // Default overlay background is Transparent so underlying apps remain visible
-        viewModel.setCanvasBackground(CanvasBackgroundColor.TRANSPARENT)
-        viewModel.setBackgroundOpacity(0.0f)
+        val prefs = getSharedPreferences(FloatingDrawingService.PREFS_NAME, Context.MODE_PRIVATE)
+        val isOledBlackMode = prefs.getBoolean(FloatingDrawingService.KEY_OLED_BLACK_MODE, false)
+
+        if (isOledBlackMode) {
+            // Pure Black Canvas for Screen-Off OLED Note taking
+            viewModel.setCanvasBackground(CanvasBackgroundColor.BLACK)
+            viewModel.setBackgroundOpacity(1.0f)
+        } else {
+            // Default overlay background is Transparent so underlying apps/lock screen remain visible
+            viewModel.setCanvasBackground(CanvasBackgroundColor.TRANSPARENT)
+            viewModel.setBackgroundOpacity(0.0f)
+        }
 
         setContent {
             MyApplicationTheme {

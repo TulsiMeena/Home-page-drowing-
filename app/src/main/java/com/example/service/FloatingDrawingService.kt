@@ -380,6 +380,8 @@ class FloatingDrawingService : Service() {
         const val KEY_POS_Y = "floating_icon_pos_y"
         const val KEY_ICON_SIZE = "floating_icon_size"
         const val KEY_EDGE_SNAP = "floating_edge_snap"
+        const val KEY_OLED_BLACK_MODE = "floating_oled_black_mode"
+        const val KEY_LOCK_SCREEN_DRAWING = "floating_lock_screen_drawing"
 
         const val ACTION_STOP_SERVICE = "com.example.action.STOP_FLOATING_SERVICE"
         const val ACTION_OVERLAY_STATE_CHANGED = "com.example.action.OVERLAY_STATE_CHANGED"
