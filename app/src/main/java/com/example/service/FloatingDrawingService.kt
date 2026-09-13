@@ -30,6 +30,9 @@ import androidx.core.app.NotificationCompat
 import com.example.DrawingOverlayActivity
 import com.example.MainActivity
 import com.example.R
+import com.example.audio.ClapDetectorEngine
+import com.example.audio.ClapSensitivity
+import com.example.audio.ClapTriggerMode
 import com.example.model.FloatingIconSize
 import kotlin.math.abs
 
@@ -42,6 +45,7 @@ class FloatingDrawingService : Service() {
     private lateinit var prefs: SharedPreferences
     private var screenWidth: Int = 1080
     private var screenHeight: Int = 1920
+    private var clapDetector: ClapDetectorEngine? = null
 
     private val screenLockReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -77,6 +81,42 @@ class FloatingDrawingService : Service() {
 
         updateScreenDimensions()
         showFloatingIcon()
+        initClapDetector()
+    }
+
+    private fun initClapDetector() {
+        clapDetector = ClapDetectorEngine(applicationContext) {
+            openDrawingCanvas()
+        }
+        syncClapDetectorState()
+    }
+
+    private fun openDrawingCanvas() {
+        val intent = Intent(applicationContext, DrawingOverlayActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        }
+        startActivity(intent)
+    }
+
+    private fun syncClapDetectorState() {
+        val isClapEnabled = prefs.getBoolean(KEY_CLAP_TO_OPEN_ENABLED, false)
+        if (isClapEnabled) {
+            val sensitivityStr = prefs.getString(KEY_CLAP_SENSITIVITY, ClapSensitivity.MEDIUM.name) ?: ClapSensitivity.MEDIUM.name
+            val modeStr = prefs.getString(KEY_CLAP_TRIGGER_MODE, ClapTriggerMode.DOUBLE_CLAP.name) ?: ClapTriggerMode.DOUBLE_CLAP.name
+            clapDetector?.sensitivity = try {
+                ClapSensitivity.valueOf(sensitivityStr)
+            } catch (e: Exception) {
+                ClapSensitivity.MEDIUM
+            }
+            clapDetector?.triggerMode = try {
+                ClapTriggerMode.valueOf(modeStr)
+            } catch (e: Exception) {
+                ClapTriggerMode.DOUBLE_CLAP
+            }
+            clapDetector?.startListening()
+        } else {
+            clapDetector?.stopListening()
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -88,8 +128,9 @@ class FloatingDrawingService : Service() {
         val notification = buildForegroundNotification()
         startForeground(NOTIFICATION_ID, notification)
 
-        // Refresh icon configuration if needed
+        // Refresh icon configuration and clap settings
         updateIconSizeAndPosition()
+        syncClapDetectorState()
 
         return START_STICKY
     }
@@ -356,6 +397,8 @@ class FloatingDrawingService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
+        clapDetector?.stopListening()
+        clapDetector = null
         try {
             unregisterReceiver(screenLockReceiver)
         } catch (e: Exception) {
@@ -382,6 +425,9 @@ class FloatingDrawingService : Service() {
         const val KEY_EDGE_SNAP = "floating_edge_snap"
         const val KEY_OLED_BLACK_MODE = "floating_oled_black_mode"
         const val KEY_LOCK_SCREEN_DRAWING = "floating_lock_screen_drawing"
+        const val KEY_CLAP_TO_OPEN_ENABLED = "floating_clap_to_open_enabled"
+        const val KEY_CLAP_SENSITIVITY = "floating_clap_sensitivity"
+        const val KEY_CLAP_TRIGGER_MODE = "floating_clap_trigger_mode"
 
         const val ACTION_STOP_SERVICE = "com.example.action.STOP_FLOATING_SERVICE"
         const val ACTION_OVERLAY_STATE_CHANGED = "com.example.action.OVERLAY_STATE_CHANGED"
@@ -394,6 +440,10 @@ class FloatingDrawingService : Service() {
             } else {
                 context.startService(intent)
             }
+        }
+
+        fun reloadSettings(context: Context) {
+            startService(context)
         }
 
         fun stopService(context: Context) {

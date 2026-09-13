@@ -1,8 +1,10 @@
 package com.example.ui.home
 
+import android.Manifest
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
@@ -42,7 +44,9 @@ import androidx.compose.material.icons.filled.Brush
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Draw
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Layers
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Transform
@@ -58,6 +62,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
+import androidx.core.content.ContextCompat
+import com.example.audio.ClapSensitivity
+import com.example.audio.ClapTriggerMode
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -120,6 +127,63 @@ fun HomeScreen(
 
     var isOledBlackMemoEnabled by remember {
         mutableStateOf(prefs.getBoolean(FloatingDrawingService.KEY_OLED_BLACK_MODE, false))
+    }
+
+    var isClapToOpenEnabled by remember {
+        mutableStateOf(prefs.getBoolean(FloatingDrawingService.KEY_CLAP_TO_OPEN_ENABLED, false))
+    }
+
+    var clapSensitivity by remember {
+        mutableStateOf(
+            try {
+                ClapSensitivity.valueOf(
+                    prefs.getString(FloatingDrawingService.KEY_CLAP_SENSITIVITY, ClapSensitivity.MEDIUM.name)
+                        ?: ClapSensitivity.MEDIUM.name
+                )
+            } catch (_: Exception) {
+                ClapSensitivity.MEDIUM
+            }
+        )
+    }
+
+    var clapTriggerMode by remember {
+        mutableStateOf(
+            try {
+                ClapTriggerMode.valueOf(
+                    prefs.getString(FloatingDrawingService.KEY_CLAP_TRIGGER_MODE, ClapTriggerMode.DOUBLE_CLAP.name)
+                        ?: ClapTriggerMode.DOUBLE_CLAP.name
+                )
+            } catch (_: Exception) {
+                ClapTriggerMode.DOUBLE_CLAP
+            }
+        )
+    }
+
+    var hasAudioPermission by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+        )
+    }
+
+    val audioPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        hasAudioPermission = isGranted
+        if (isGranted) {
+            isClapToOpenEnabled = true
+            prefs.edit().putBoolean(FloatingDrawingService.KEY_CLAP_TO_OPEN_ENABLED, true).apply()
+            if (isFloatingServiceEnabled) {
+                FloatingDrawingService.reloadSettings(context)
+            } else if (hasOverlayPermission) {
+                FloatingDrawingService.startService(context)
+                isFloatingServiceEnabled = true
+            }
+            Toast.makeText(context, "Clap detection activated! Clap twice to open drawing.", Toast.LENGTH_LONG).show()
+        } else {
+            isClapToOpenEnabled = false
+            prefs.edit().putBoolean(FloatingDrawingService.KEY_CLAP_TO_OPEN_ENABLED, false).apply()
+            Toast.makeText(context, "Microphone permission is required for Clap to Open Drawing.", Toast.LENGTH_SHORT).show()
+        }
     }
 
     val overlayPermissionLauncher = rememberLauncherForActivityResult(
@@ -463,6 +527,169 @@ fun HomeScreen(
                                 checkedTrackColor = Color(0xFF00E5FF)
                             )
                         )
+                    }
+
+                    // Clap to Open Drawing (ताली बजाकर ड्राइंग खोलें)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .background(Color(0xFF24143A), CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Mic,
+                                    contentDescription = "Clap detector",
+                                    tint = Color(0xFFD500F9),
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text("Clap to Open Drawing", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Surface(
+                                        color = Color(0xFF7C4DFF).copy(alpha = 0.2f),
+                                        shape = RoundedCornerShape(4.dp)
+                                    ) {
+                                        Text(
+                                            "ताली बजाएं 👏",
+                                            color = Color(0xFFE040FB),
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                                        )
+                                    }
+                                }
+                                Text("Clap hands to open canvas instantly", color = Color(0xFF8E92A4), fontSize = 11.sp)
+                            }
+                        }
+
+                        Switch(
+                            checked = isClapToOpenEnabled,
+                            onCheckedChange = { enable ->
+                                if (enable) {
+                                    if (!hasAudioPermission) {
+                                        audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                                    } else {
+                                        isClapToOpenEnabled = true
+                                        prefs.edit().putBoolean(FloatingDrawingService.KEY_CLAP_TO_OPEN_ENABLED, true).apply()
+                                        if (isFloatingServiceEnabled) {
+                                            FloatingDrawingService.reloadSettings(context)
+                                        } else if (hasOverlayPermission) {
+                                            FloatingDrawingService.startService(context)
+                                            isFloatingServiceEnabled = true
+                                        }
+                                        Toast.makeText(context, "Clap detection activated!", Toast.LENGTH_SHORT).show()
+                                    }
+                                } else {
+                                    isClapToOpenEnabled = false
+                                    prefs.edit().putBoolean(FloatingDrawingService.KEY_CLAP_TO_OPEN_ENABLED, false).apply()
+                                    if (isFloatingServiceEnabled) {
+                                        FloatingDrawingService.reloadSettings(context)
+                                    }
+                                }
+                            },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = Color.Black,
+                                checkedTrackColor = Color(0xFFD500F9)
+                            )
+                        )
+                    }
+
+                    AnimatedVisibility(visible = isClapToOpenEnabled) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(Color(0xFF140D24), RoundedCornerShape(12.dp))
+                                .padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            // Clap Trigger Mode
+                            Text(
+                                "CLAP PATTERN",
+                                color = Color(0xFFD500F9),
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                ClapTriggerMode.values().forEach { mode ->
+                                    val isSelected = clapTriggerMode == mode
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(if (isSelected) Color(0xFFD500F9) else Color(0xFF221638))
+                                            .clickable {
+                                                clapTriggerMode = mode
+                                                prefs.edit().putString(FloatingDrawingService.KEY_CLAP_TRIGGER_MODE, mode.name).apply()
+                                                FloatingDrawingService.reloadSettings(context)
+                                            }
+                                            .padding(vertical = 8.dp, horizontal = 4.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = if (mode == ClapTriggerMode.DOUBLE_CLAP) "Double Clap 👏 👏" else "Single Clap 👏",
+                                            color = if (isSelected) Color.Black else Color.White,
+                                            fontSize = 11.sp,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                        )
+                                    }
+                                }
+                            }
+
+                            // Sensitivity selector
+                            Text(
+                                "SENSITIVITY",
+                                color = Color(0xFFD500F9),
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                ClapSensitivity.values().forEach { sens ->
+                                    val isSelected = clapSensitivity == sens
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(if (isSelected) Color(0xFF00E5FF) else Color(0xFF221638))
+                                            .clickable {
+                                                clapSensitivity = sens
+                                                prefs.edit().putString(FloatingDrawingService.KEY_CLAP_SENSITIVITY, sens.name).apply()
+                                                FloatingDrawingService.reloadSettings(context)
+                                            }
+                                            .padding(vertical = 8.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = sens.name,
+                                            color = if (isSelected) Color.Black else Color.White,
+                                            fontSize = 11.sp,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                        )
+                                    }
+                                }
+                            }
+
+                            Text(
+                                "Tip: Clapping twice allows you to take notes without touching the phone, even when screen is black or locked.",
+                                color = Color(0xFFB099D0),
+                                fontSize = 10.sp,
+                                lineHeight = 14.sp
+                            )
+                        }
                     }
                 }
             }
